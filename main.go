@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"time"
 )
 
+// Extract zip file to "./temp" directory
 func extractYearlyZip(dir string, file string) {
 	zipYearly, err := zip.OpenReader(dir + file)
 	if err != nil {
@@ -61,6 +63,7 @@ func extractYearlyZip(dir string, file string) {
 
 }
 
+// Extract weekly zip file to "./temp/extracted" directory
 func extractWeeklyZip(dir string, fileName string) {
 	// var wg sync.WaitGroup
 
@@ -131,37 +134,7 @@ func extractWeeklyZip(dir string, fileName string) {
 	// wg.Wait()
 }
 
-func readDataFile(dir string, file string) string {
-	f, err := os.ReadFile(dir + file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fileText := string(f[:])
-	textArr := strings.Split(fileText, "\n")
-	lineOutput := ""
-
-	for _, line := range textArr {
-		if len(line) > 0 {
-			switch recType := line[0]; recType {
-			case 'B':
-				// fmt.Println(lineOutput)
-				lineOutput += "\n"
-				recItems := strings.Split(line, ";")
-				for _, item := range recItems {
-					lineOutput += item + " - "
-				}
-				lineOutput += "\b\b\b"
-			case 'C':
-				recItems := strings.Split(line, ";")
-				lineOutput += recItems[5]
-			}
-		}
-	}
-
-	return lineOutput
-}
-
+// Extract file to destination folder
 func extractFile(src *zip.File, destFolder string) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -203,6 +176,47 @@ func extractFile(src *zip.File, destFolder string) {
 	}
 }
 
+// Read data in provided ".DAT" file and return a 2D slice
+func readDataFile(dir string, file string) [][]string {
+	f, err := os.ReadFile(dir + file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fileText := string(f[:])
+	textArr := strings.Split(fileText, "\n")
+	fileOutput := [][]string{}
+	lineSlice := []string{}
+
+	for _, line := range textArr {
+
+		if len(line) > 0 {
+			switch recType := line[0]; recType {
+			case 'B':
+				lineSlice = []string{} // Reset lineSlice
+
+				// Adds B record data to lineSlice
+				recItems := strings.Split(line, ";")
+				lineSlice = append(lineSlice, recItems...)
+				lineSlice[len(lineSlice)-1] = "" // Make sure the last string in the slice is empty. This string is used to hold all values of relevant C records
+				fileOutput = append(fileOutput, lineSlice)
+			case 'C':
+				recItems := strings.Split(line, ";")
+				if recItems[3] != lineSlice[3] {
+					fmt.Printf("Error found in function readDataFile(string, string)")
+					fmt.Printf("Property ID (%s) of record type C does not match property ID (%s) of record type B. File: %s \n", recItems[3], lineSlice[3], file)
+					continue
+				}
+				lineSlice[len(lineSlice)-1] += recItems[5]
+			}
+		}
+	}
+
+	// fmt.Println(fileOutput)
+
+	return fileOutput
+}
+
 func main() {
 	// Extract yearly zip file to "temp" directory
 	fmt.Println("Extracting zip...")
@@ -226,34 +240,56 @@ func main() {
 	}
 	fmt.Print("\b\b\b\b\bCompleted\n\n")
 
+	// Open new csv file to write result to
+	csvFile, err := os.Create("./2024.csv")
+	if err != nil {
+		panic(err)
+	}
+
 	// Read all files in "extracted" directory
-	fmt.Println("Reading property data:")
+	fmt.Println("Reading property data...")
 	time.Sleep(3 * time.Second)
+	resultString := [][]string{
+		{
+			"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
+			"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
+			"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
+			"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
+		},
+	}
+
 	entries, err := os.ReadDir("./temp/extracted")
 	if err != nil {
 		panic(err)
 	}
 
 	for i, entry := range entries {
-		if i <= 100 {
-			continue
-		}
-		if i >= 110 {
-			break
-		}
-		resultString := readDataFile("./temp/extracted/", entry.Name())
-		fmt.Printf("%d - %s\n", i, entry.Name())
-		fmt.Print("-----------------------")
-		fmt.Print(resultString + "\n\n")
-		// fmt.Print("\b\b\b\b\b\b\b\b\b")
-		// fmt.Printf("%d/%d", i, len(entries))
+		// if i >= 1 {
+		// 	continue
+		// }
+
+		resultString = append(resultString, readDataFile("./temp/extracted/", entry.Name())...)
+
+		// fmt.Printf("%d - %s\n", i, entry.Name())
+		// fmt.Print("-----------------------\n")
+		// fmt.Println(resultString)
+
+		fmt.Print("\b\b\b\b\b\b\b\b\b")
+		fmt.Printf("%d/%d", i+1, len(entries))
 	}
+
+	writer := csv.NewWriter(csvFile)
+	defer writer.Flush()
+	writer.WriteAll(resultString)
+
 	fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
 
 	// Clean the "temp" directory
 	time.Sleep(3 * time.Second)
-	fmt.Println("Cleaning \"temp\" directory")
-	os.RemoveAll("./temp")
+	fmt.Println("Cleaning \"temp\" directory...")
+	removeErr := os.RemoveAll("./temp")
+	for removeErr != nil {
+		removeErr = os.RemoveAll("./temp")
+	}
 	fmt.Print("Completed\n\n")
-	// readDataFile("./temp/extracted/", "223_SALES_DATA_NNME_01012024.DAT")
 }
