@@ -2,19 +2,19 @@ package main
 
 import (
 	"archive/zip"
-	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 // Extract zip file to "./temp" directory
-func extractYearlyZip(path string) {
+func extractYearlyZip(path string) string {
 	dir := filepath.Dir(path)
 
 	// open the yearly zip file
@@ -24,14 +24,31 @@ func extractYearlyZip(path string) {
 	}
 	defer zipYearly.Close()
 
+	// Check if temp directory already exist, if yes, change name until unique temp folder name found
+	tempFolderName := "temp"
+	index := 0
+	_, tempErr := os.Stat(filepath.Join(dir, tempFolderName))
+	if err != nil && !os.IsExist(tempErr) {
+		panic(err)
+	}
+
+	for tempErr == nil || os.IsExist(tempErr) {
+		if len(tempFolderName) > 4 { // If not the first time, remove last number
+			tempFolderName = tempFolderName[:len(tempFolderName)-len(strconv.Itoa(index))]
+		}
+		index++
+		tempFolderName += strconv.Itoa(index)
+		_, tempErr = os.Stat(filepath.Join(dir, tempFolderName))
+	}
+
 	// create temp directory if not already exist
-	if err := os.MkdirAll(filepath.Join(dir, "temp"), os.ModeDir); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, tempFolderName), os.ModeDir); err != nil {
 		panic(err)
 	}
 
 	for _, file := range zipYearly.File {
 		// Create destination path
-		filePath := filepath.Join(dir, "temp", file.Name)
+		filePath := filepath.Join(dir, tempFolderName, file.Name)
 
 		// Check if file is a directory
 		if file.FileInfo().IsDir() {
@@ -59,79 +76,37 @@ func extractYearlyZip(path string) {
 		if _, err := io.Copy(dstFile, srcFile); err != nil {
 			panic(err)
 		}
+
 	}
 
+	return tempFolderName
 }
 
 // Extract weekly zip file to "./temp/extracted" directory
-func extractWeeklyZip(dir string, fileName string) {
-	// var wg sync.WaitGroup
+func extractWeeklyZip(path string) {
+	dir := filepath.Dir(path)
 
 	// Skip extracting if file is a directory. Print error if file is invalid
-	if info, err := os.Stat(dir + fileName); err != nil || info.IsDir() {
+	if info, err := os.Stat(path); err != nil || info.IsDir() {
 		if err != nil {
 			panic(err)
 		}
 		return
 	}
 
-	zipWeekly, err := zip.OpenReader(dir + fileName)
+	zipWeekly, err := zip.OpenReader(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// create temp directory if not already exist
-	if err := os.MkdirAll(dir+"/extracted", os.ModeDir); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "extracted"), os.ModeDir); err != nil {
 		panic(err)
 	}
 
 	for _, file := range zipWeekly.File {
-		extractFile(file, filepath.Join(dir, "/extracted/"))
-		// // Create destination path
-		// filePath := filepath.Join(dir, "/extracted/", file.Name)
-
-		// // Check if file is a directory
-		// if file.FileInfo().IsDir() {
-		// 	// Create the directory
-		// 	if err := os.MkdirAll(filepath.Dir(filePath), os.ModeDir); err != nil {
-		// 		panic(err)
-		// 	}
-		// }
-
-		// // Create empty destination file
-		// // fmt.Println("Opening file: " + fileName)
-		// dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-		// if err != nil {
-		// 	panic(err)
-		// }
-
-		// // Open the source file
-		// wg.Add(1)
-		// srcFile, err := file.Open()
-		// if err != nil {
-		// 	panic(err)
-		// }
-
-		// // Copy content from source file to destination file
-		// if _, err := io.Copy(dstFile, srcFile); err != nil {
-		// 	panic(err)
-		// }
-
-		// // fmt.Println("Closing: " + fileName)
-
-		// srcFile.Close()
-		// dstFile.Close()
-
-		// // fmt.Println("Closed: " + fileName)
-		// wg.Done()
-
-		// // Close both files
-
-		// // fmt.Println("Removing: " + fileName)
-		// // remove(dir + fileName)
+		extractFile(file, filepath.Join(dir, "extracted"))
 	}
-
-	// wg.Wait()
 }
 
 // Extract file to destination folder
@@ -226,80 +201,84 @@ func convertZipToSlice(path string) {
 
 func main() {
 
+	// Program Parameters
+	INPUT_PATH := "./2024.zip"
+
 	// convertZipToSlice("./2024.zip")
 
 	// Extract yearly zip file to "temp" directory
 	fmt.Println("Extracting zip...")
-	extractYearlyZip("./2024.zip")
+	tempPath := extractYearlyZip(INPUT_PATH)
+	fmt.Println(tempPath)
 	fmt.Print("Completed\n\n")
 
 	time.Sleep(3 * time.Second)
 
-	// Read "temp" directory to get all weekly zip files
-	fmt.Println("Extracting inner zip...")
-	items, err := os.ReadDir("./temp")
-	if err != nil {
-		panic(err)
-	}
+	// // Read "temp" directory to get all weekly zip files
+	// fmt.Println("Extracting inner zip...")
+	// items, err := os.ReadDir(tempPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Extract all weekly zip files to "temp/extracted" directory
-	for i, item := range items {
-		extractWeeklyZip("./temp/", item.Name())
-		fmt.Printf("\b\b\b\b\b")
-		fmt.Printf("%d/%d", i+1, len(items))
-	}
-	fmt.Print("\b\b\b\b\bCompleted\n\n")
+	// // Extract all weekly zip files to "temp/extracted" directory
+	// for i, item := range items {
+	// 	extractWeeklyZip(filepath.Join("./temp", item.Name()))
+	// 	fmt.Printf("\b\b\b\b\b")
+	// 	fmt.Printf("%d/%d", i+1, len(items))
+	// }
+	// fmt.Print("\b\b\b\b\bCompleted\n\n")
 
-	// Open new csv file to write result to
-	csvFile, err := os.Create("./2024.csv")
-	if err != nil {
-		panic(err)
-	}
+	// // Open new csv file to write result to
+	// csvFile, err := os.Create("./2024.csv")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Read all files in "extracted" directory
-	fmt.Println("Reading property data...")
-	time.Sleep(3 * time.Second)
-	resultString := [][]string{
-		{
-			"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
-			"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
-			"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
-			"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
-		},
-	}
+	// // Read all files in "extracted" directory
+	// fmt.Println("Reading property data...")
+	// time.Sleep(3 * time.Second)
+	// resultString := [][]string{
+	// 	{
+	// 		"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
+	// 		"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
+	// 		"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
+	// 		"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
+	// 	},
+	// }
 
-	entries, err := os.ReadDir("./temp/extracted")
-	if err != nil {
-		panic(err)
-	}
+	// entries, err := os.ReadDir("./temp/extracted")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	for i, entry := range entries {
-		// if i >= 1 {
-		// 	continue
-		// }
+	// for i, entry := range entries {
+	// 	// if i >= 1 {
+	// 	// 	continue
+	// 	// }
 
-		resultString = append(resultString, readDataFile("./temp/extracted/", entry.Name())...)
+	// 	resultString = append(resultString, readDataFile("./temp/extracted/", entry.Name())...)
 
-		// fmt.Printf("%d - %s\n", i, entry.Name())
-		// fmt.Print("-----------------------\n")
-		// fmt.Println(resultString)
+	// 	// fmt.Printf("%d - %s\n", i, entry.Name())
+	// 	// fmt.Print("-----------------------\n")
+	// 	// fmt.Println(resultString)
 
-		fmt.Print("\b\b\b\b\b\b\b\b\b")
-		fmt.Printf("%d/%d", i+1, len(entries))
-	}
+	// 	fmt.Print("\b\b\b\b\b\b\b\b\b")
+	// 	fmt.Printf("%d/%d", i+1, len(entries))
+	// }
 
-	writer := csv.NewWriter(csvFile)
-	defer writer.Flush()
-	writer.WriteAll(resultString)
+	// writer := csv.NewWriter(csvFile)
+	// defer writer.Flush()
+	// writer.WriteAll(resultString)
 
-	fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
+	// fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
 
 	// Clean the "temp" directory
-	time.Sleep(3 * time.Second)
-	fmt.Println("Cleaning \"temp\" directory...")
-	removeErr := os.RemoveAll("./temp")
+	fmt.Printf("Cleaning %s directory...\n", tempPath)
+	removeErr := os.RemoveAll(tempPath)
 	for removeErr != nil {
-		removeErr = os.RemoveAll("./temp")
+		removeErr = os.RemoveAll(tempPath)
 	}
 	fmt.Print("Completed\n\n")
+	time.Sleep(3 * time.Second)
 }
