@@ -14,22 +14,24 @@ import (
 )
 
 // Extract zip file to "./temp" directory
-func extractYearlyZip(dir string, file string) {
-	zipYearly, err := zip.OpenReader(dir + file)
+func extractYearlyZip(path string) {
+	dir := filepath.Dir(path)
+
+	// open the yearly zip file
+	zipYearly, err := zip.OpenReader(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer zipYearly.Close()
 
 	// create temp directory if not already exist
-	if err := os.MkdirAll(dir+"/temp", os.ModeDir); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "temp"), os.ModeDir); err != nil {
 		panic(err)
 	}
 
 	for _, file := range zipYearly.File {
 		// Create destination path
-		filePath := filepath.Join(dir, "/temp/", file.Name)
-		// fmt.Println("Extracting file ", filePath)
+		filePath := filepath.Join(dir, "temp", file.Name)
 
 		// Check if file is a directory
 		if file.FileInfo().IsDir() {
@@ -44,21 +46,19 @@ func extractYearlyZip(dir string, file string) {
 		if err != nil {
 			panic(err)
 		}
+		defer dstFile.Close()
 
 		// Open the source file
 		srcFile, err := file.Open()
 		if err != nil {
 			panic(err)
 		}
+		defer srcFile.Close()
 
 		// Copy content from source file to destination file
 		if _, err := io.Copy(dstFile, srcFile); err != nil {
 			panic(err)
 		}
-
-		// Close both files
-		dstFile.Close()
-		srcFile.Close()
 	}
 
 }
@@ -217,10 +217,20 @@ func readDataFile(dir string, file string) [][]string {
 	return fileOutput
 }
 
+func convertZipToSlice(path string) {
+	dir := filepath.Dir(path)
+	fileName := filepath.Base(path)
+
+	fmt.Printf("Dir: %s, Path: %s", dir, fileName)
+}
+
 func main() {
+
+	// convertZipToSlice("./2024.zip")
+
 	// Extract yearly zip file to "temp" directory
 	fmt.Println("Extracting zip...")
-	extractYearlyZip(".", "/2024.zip")
+	extractYearlyZip("./2024.zip")
 	fmt.Print("Completed\n\n")
 
 	time.Sleep(3 * time.Second)
