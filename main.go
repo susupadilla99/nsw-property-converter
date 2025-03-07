@@ -194,23 +194,11 @@ func readDataFile(path string) [][]string {
 	return fileOutput
 }
 
-func convertZipToSlice(path string) {
-	dir := filepath.Dir(path)
-	fileName := filepath.Base(path)
-
-	fmt.Printf("Dir: %s, Path: %s", dir, fileName)
-}
-
-func main() {
-
-	// Program Parameters
-	INPUT_PATH := "./2024.zip"
-
-	// convertZipToSlice("./2024.zip")
-
+// Convert a yearly zip file to a 2d string slice
+func convertYearToSlice(path string) [][]string {
 	// Extract yearly zip file to "temp" directory
 	fmt.Println("Extracting zip...")
-	tempPath := extractYearlyZip(INPUT_PATH)
+	tempPath := extractYearlyZip(path)
 	fmt.Print("Completed\n\n")
 
 	time.Sleep(3 * time.Second)
@@ -230,18 +218,10 @@ func main() {
 	}
 	fmt.Print("\b\b\b\b\bCompleted\n\n")
 
-	// Open new csv file to write result to
-	csvFileName := strings.TrimSuffix(filepath.Base(INPUT_PATH), filepath.Ext(INPUT_PATH)) + ".csv"
-	csvPath := filepath.Join(filepath.Dir(INPUT_PATH), csvFileName)
-	csvFile, err := os.Create(csvPath)
-	if err != nil {
-		panic(err)
-	}
-
 	// Read all files in "extracted" directory
-	fmt.Println("Reading property data...")
+	fmt.Println("Converting property data...")
 	time.Sleep(3 * time.Second)
-	resultString := [][]string{
+	convertedData := [][]string{
 		{
 			"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
 			"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
@@ -257,20 +237,11 @@ func main() {
 
 	for i, entry := range entries {
 		entryPath := filepath.Join(tempPath, "extracted", entry.Name())
-		resultString = append(resultString, readDataFile(entryPath)...)
-
-		// fmt.Printf("%d - %s\n", i, entry.Name())
-		// fmt.Print("-----------------------\n")
-		// fmt.Println(resultString)
+		convertedData = append(convertedData, readDataFile(entryPath)...)
 
 		fmt.Print("\b\b\b\b\b\b\b\b\b")
 		fmt.Printf("%d/%d", i+1, len(entries))
 	}
-
-	writer := csv.NewWriter(csvFile)
-	defer writer.Flush()
-	writer.WriteAll(resultString)
-
 	fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
 
 	// Clean the "temp" directory
@@ -281,4 +252,36 @@ func main() {
 	}
 	fmt.Print("Completed\n\n")
 	time.Sleep(3 * time.Second)
+
+	return convertedData
+}
+
+func writeToCSV(data [][]string, path string) {
+	fmt.Println("Writing to CSV file...")
+
+	// Open new csv file to write result to
+	csvFile, err := os.Create(path)
+	if err != nil {
+		panic(err)
+	}
+
+	writer := csv.NewWriter(csvFile)
+	defer writer.Flush()
+	writer.WriteAll(data)
+
+	time.Sleep(3 * time.Second)
+	fmt.Println("Completed")
+}
+
+func main() {
+
+	// Program Parameters
+	INPUT_PATH := "./2024.zip"
+
+	dataSlice := convertYearToSlice(INPUT_PATH)
+
+	csvPath := strings.TrimSuffix(INPUT_PATH, filepath.Ext(INPUT_PATH)) + ".csv"
+
+	writeToCSV(dataSlice, csvPath)
+
 }
