@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-// Extract zip file to "./temp" directory
+// Extract zip file to a temp directory and return the path to that directory
 func extractYearlyZip(path string) string {
 	dir := filepath.Dir(path)
 
@@ -79,7 +80,7 @@ func extractYearlyZip(path string) string {
 
 	}
 
-	return tempFolderName
+	return filepath.Join(dir, tempFolderName)
 }
 
 // Extract weekly zip file to "./temp/extracted" directory
@@ -152,8 +153,9 @@ func extractFile(src *zip.File, destFolder string) {
 }
 
 // Read data in provided ".DAT" file and return a 2D slice
-func readDataFile(dir string, file string) [][]string {
-	f, err := os.ReadFile(dir + file)
+func readDataFile(path string) [][]string {
+
+	f, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -179,7 +181,7 @@ func readDataFile(dir string, file string) [][]string {
 				recItems := strings.Split(line, ";")
 				if recItems[3] != lineSlice[3] {
 					fmt.Printf("Error found in function readDataFile(string, string)")
-					fmt.Printf("Property ID (%s) of record type C does not match property ID (%s) of record type B. File: %s \n", recItems[3], lineSlice[3], file)
+					fmt.Printf("Property ID (%s) of record type C does not match property ID (%s) of record type B. File: %s \n", recItems[3], lineSlice[3], filepath.Base(path))
 					continue
 				}
 				lineSlice[len(lineSlice)-1] += recItems[5]
@@ -209,69 +211,67 @@ func main() {
 	// Extract yearly zip file to "temp" directory
 	fmt.Println("Extracting zip...")
 	tempPath := extractYearlyZip(INPUT_PATH)
-	fmt.Println(tempPath)
 	fmt.Print("Completed\n\n")
 
 	time.Sleep(3 * time.Second)
 
-	// // Read "temp" directory to get all weekly zip files
-	// fmt.Println("Extracting inner zip...")
-	// items, err := os.ReadDir(tempPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Read "temp" directory to get all weekly zip files
+	fmt.Println("Extracting inner zip...")
+	items, err := os.ReadDir(tempPath)
+	if err != nil {
+		panic(err)
+	}
 
-	// // Extract all weekly zip files to "temp/extracted" directory
-	// for i, item := range items {
-	// 	extractWeeklyZip(filepath.Join("./temp", item.Name()))
-	// 	fmt.Printf("\b\b\b\b\b")
-	// 	fmt.Printf("%d/%d", i+1, len(items))
-	// }
-	// fmt.Print("\b\b\b\b\bCompleted\n\n")
+	// Extract all weekly zip files to "temp/extracted" directory
+	for i, item := range items {
+		extractWeeklyZip(filepath.Join(tempPath, item.Name()))
+		fmt.Printf("\b\b\b\b\b")
+		fmt.Printf("%d/%d", i+1, len(items))
+	}
+	fmt.Print("\b\b\b\b\bCompleted\n\n")
 
-	// // Open new csv file to write result to
-	// csvFile, err := os.Create("./2024.csv")
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Open new csv file to write result to
+	csvFileName := strings.TrimSuffix(filepath.Base(INPUT_PATH), filepath.Ext(INPUT_PATH)) + ".csv"
+	csvPath := filepath.Join(filepath.Dir(INPUT_PATH), csvFileName)
+	csvFile, err := os.Create(csvPath)
+	if err != nil {
+		panic(err)
+	}
 
-	// // Read all files in "extracted" directory
-	// fmt.Println("Reading property data...")
-	// time.Sleep(3 * time.Second)
-	// resultString := [][]string{
-	// 	{
-	// 		"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
-	// 		"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
-	// 		"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
-	// 		"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
-	// 	},
-	// }
+	// Read all files in "extracted" directory
+	fmt.Println("Reading property data...")
+	time.Sleep(3 * time.Second)
+	resultString := [][]string{
+		{
+			"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
+			"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
+			"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
+			"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
+		},
+	}
 
-	// entries, err := os.ReadDir("./temp/extracted")
-	// if err != nil {
-	// 	panic(err)
-	// }
+	entries, err := os.ReadDir(filepath.Join(tempPath, "extracted"))
+	if err != nil {
+		panic(err)
+	}
 
-	// for i, entry := range entries {
-	// 	// if i >= 1 {
-	// 	// 	continue
-	// 	// }
+	for i, entry := range entries {
+		entryPath := filepath.Join(tempPath, "extracted", entry.Name())
+		resultString = append(resultString, readDataFile(entryPath)...)
 
-	// 	resultString = append(resultString, readDataFile("./temp/extracted/", entry.Name())...)
+		// fmt.Printf("%d - %s\n", i, entry.Name())
+		// fmt.Print("-----------------------\n")
+		// fmt.Println(resultString)
 
-	// 	// fmt.Printf("%d - %s\n", i, entry.Name())
-	// 	// fmt.Print("-----------------------\n")
-	// 	// fmt.Println(resultString)
+		fmt.Print("\b\b\b\b\b\b\b\b\b")
+		fmt.Printf("%d/%d", i+1, len(entries))
+	}
 
-	// 	fmt.Print("\b\b\b\b\b\b\b\b\b")
-	// 	fmt.Printf("%d/%d", i+1, len(entries))
-	// }
+	writer := csv.NewWriter(csvFile)
+	defer writer.Flush()
+	writer.WriteAll(resultString)
 
-	// writer := csv.NewWriter(csvFile)
-	// defer writer.Flush()
-	// writer.WriteAll(resultString)
-
-	// fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
+	fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
 
 	// Clean the "temp" directory
 	fmt.Printf("Cleaning %s directory...\n", tempPath)
