@@ -106,7 +106,7 @@ func ConvertYearToSlice(path string) []Property {
 	return convertedData
 }
 
-func ConvertSliceToCSV(data [][]string, path string) string {
+func ConvertSliceToCSV(data []Property, path string) string {
 	fmt.Println("Writing to CSV file...")
 	time.Sleep(3 * time.Second)
 
@@ -117,7 +117,7 @@ func ConvertSliceToCSV(data [][]string, path string) string {
 	return resultFilePath
 }
 
-func ConvertSliceToJSON(data [][]string) {
+func ConvertSliceToJSON(data []Property) {
 	fmt.Println("Converting to JSON data...")
 	time.Sleep(3 * time.Second)
 
