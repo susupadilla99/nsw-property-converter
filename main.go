@@ -11,6 +11,8 @@ import (
 	"github.com/susupadilla99/nsw-property-converter/extractors"
 )
 
+type Property = extractors.Property
+
 // Extract all yearly zip file to a temp directory and return the path to that directory
 func extractYearlyZip(path string) string {
 	fmt.Println("Extracting zip...")
@@ -44,18 +46,20 @@ func extractWeeklyZips(path string) {
 }
 
 // Read all .DAT files in the provided (temp)/extracted path and return a 2D slice containing all those data with header
-func convertFilesToSlice(path string) [][]string {
+func convertFilesToSlice(path string) []Property {
 	fmt.Println("Converting property data...")
 	time.Sleep(3 * time.Second)
 
-	resultData := [][]string{
-		{
-			"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
-			"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
-			"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
-			"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
-		},
-	}
+	// resultData := [][]string{
+	// 	{
+	// 		"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
+	// 		"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
+	// 		"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
+	// 		"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
+	// 	},
+	// }
+
+	resultData := []Property{}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -89,7 +93,7 @@ func removeTempDir(path string) {
 }
 
 // Convert a yearly zip file to a 2D string slice
-func ConvertYearToSlice(path string) [][]string {
+func ConvertYearToSlice(path string) []Property {
 
 	tempPath := extractYearlyZip(path)
 
