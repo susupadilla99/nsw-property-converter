@@ -113,6 +113,20 @@ func ConvertSliceToCSV(data [][]string, path string) string {
 	return resultFilePath
 }
 
+func ConvertSliceToJSON(data [][]string) {
+	fmt.Println("Converting to JSON data...")
+	time.Sleep(3 * time.Second)
+
+	fmt.Println("I am here first")
+	fmt.Println(data[0])
+
+	resultData := converters.ConvertSliceToJSON(data)
+
+	fmt.Println(resultData)
+
+	fmt.Printf("Completed\n\n")
+}
+
 func main() {
 
 	// Program Parameters
@@ -124,5 +138,8 @@ func main() {
 
 	csvFileFullPath := ConvertSliceToCSV(dataSlice, csvPath)
 
-	fmt.Printf("Exported to %s.", csvFileFullPath)
+	fmt.Printf("Exported to %s.\n\n", csvFileFullPath)
+
+	ConvertSliceToJSON(dataSlice)
+
 }

@@ -3,9 +3,9 @@ package converters
 import (
 	"encoding/csv"
 	"os"
-	"path/filepath"
 )
 
+// Convert provided 2D data slice to csv and write to csv file at "path"
 func ConvertSliceToCSV(data [][]string, path string) string {
 
 	// Open new csv file to write result to
@@ -18,5 +18,5 @@ func ConvertSliceToCSV(data [][]string, path string) string {
 	defer writer.Flush()
 	writer.WriteAll(data)
 
-	return filepath.Join(filepath.Dir(path), csvFile.Name())
+	return path
 }
