@@ -38,26 +38,17 @@ func extractWeeklyZips(path string) {
 	// Extract all weekly zip files to "temp/extracted" directory
 	for i, item := range items {
 		extractors.ExtractWeeklyZip(filepath.Join(path, item.Name()))
-		fmt.Printf("\b\b\b\b\b")
+		fmt.Printf("\b\b\b\b\b\b\b")
 		fmt.Printf("%d/%d", i+1, len(items))
 	}
 
-	fmt.Print("\b\b\b\b\bCompleted\n\n")
+	fmt.Print("\nCompleted\n\n")
 }
 
-// Read all .DAT files in the provided (temp)/extracted path and return a 2D slice containing all those data with header
-func convertFilesToSlice(path string) []Property {
+// Read all .DAT files in the provided (temp)/extracted path and return a []Property object
+func convertFiles(path string) []Property {
 	fmt.Println("Converting property data...")
 	time.Sleep(3 * time.Second)
-
-	// resultData := [][]string{
-	// 	{
-	// 		"Record Type", "District Code", "Property ID", "Sale Counter", "Download Date/Time", "Property Name",
-	// 		"Property Unit Number", "Property House Number", "Property Street Name", "Property Locality", "Property Post Code",
-	// 		"Area", "Area Type", "Contract Date", "Settlement Date", "Purchase Price", "Zoning", "Nature of Property",
-	// 		"Primary Purpose", "Strata Lot Number", "Component Code", "Sale Code", "% Interest of Sale", "Dealing Number", "Property Legal Description",
-	// 	},
-	// }
 
 	resultData := []Property{}
 
@@ -74,7 +65,7 @@ func convertFilesToSlice(path string) []Property {
 		fmt.Printf("%d/%d", i+1, len(entries))
 	}
 
-	fmt.Print("\b\b\b\b\b\b\b\b\bCompleted\n\n")
+	fmt.Print("\nCompleted\n\n")
 
 	return resultData
 }
@@ -99,36 +90,46 @@ func ConvertYearToSlice(path string) []Property {
 
 	extractWeeklyZips(tempPath)
 
-	convertedData := convertFilesToSlice(filepath.Join(tempPath, "extracted"))
+	convertedData := convertFiles(filepath.Join(tempPath, "extracted"))
 
 	removeTempDir(tempPath)
 
 	return convertedData
 }
 
-func ConvertSliceToCSV(data []Property, path string) string {
+func ConvertSliceToCSV(data []Property, path string) {
+	// Convert to 2D Slice
+	fmt.Println("Converting file to CSV")
+	time.Sleep(3 * time.Second)
+
+	properties := [][]string{}
+	for i, property := range data {
+		properties = append(properties, converters.ConvertPropertyToSlice(property))
+
+		fmt.Printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+		fmt.Printf("%d/%d", i+1, len(data))
+	}
+
+	fmt.Printf("\nCompleted\n\n")
+
+	// Write to CSV File
 	fmt.Println("Writing to CSV file...")
 	time.Sleep(3 * time.Second)
 
-	resultFilePath := converters.ConvertSliceToCSV(data, path)
+	converters.WriteSliceToCSV(properties, path)
 
 	fmt.Printf("Completed\n\n")
-
-	return resultFilePath
 }
 
-func ConvertSliceToJSON(data []Property) {
+func ConvertSliceToJSON(data []Property) string {
 	fmt.Println("Converting to JSON data...")
 	time.Sleep(3 * time.Second)
 
-	fmt.Println("I am here first")
-	fmt.Println(data[0])
-
 	resultData := converters.ConvertSliceToJSON(data)
 
-	fmt.Println(resultData)
-
 	fmt.Printf("Completed\n\n")
+
+	return resultData
 }
 
 func main() {
@@ -140,10 +141,11 @@ func main() {
 
 	csvPath := strings.TrimSuffix(INPUT_PATH, filepath.Ext(INPUT_PATH)) + ".csv"
 
-	csvFileFullPath := ConvertSliceToCSV(dataSlice, csvPath)
+	ConvertSliceToCSV(dataSlice, csvPath)
 
-	fmt.Printf("Exported to %s.\n\n", csvFileFullPath)
+	fmt.Printf("Exported to %s.\n\n", csvPath)
 
 	ConvertSliceToJSON(dataSlice)
 
+	fmt.Printf("Converted to JSON\n\n")
 }

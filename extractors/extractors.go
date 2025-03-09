@@ -229,9 +229,10 @@ func ReadDataFile(path string) []Property {
 				data = append(data, currentRecord)
 			case 'C': // Record C => Add data to Property_Legal_Description field
 				recItems := strings.Split(record, ";")
-				if recItems[3] != currentRecord.Property_ID {
+				if recItems[2] != currentRecord.Property_ID {
 					fmt.Printf("Error found in function readDataFile(string, string)")
 					fmt.Printf("Property ID (%s) of record type C does not match property ID (%s) of record type B. File: %s \n", recItems[3], currentRecord.Property_ID, filepath.Base(path))
+					fmt.Println(record)
 					continue
 				}
 				currentRecord.Property_Legal_Description += recItems[5]
