@@ -83,7 +83,7 @@ func removeTempDir(path string) {
 	fmt.Print("Completed\n\n")
 }
 
-// Convert a yearly zip file to a 2D string slice
+// Convert a yearly zip file to []Property
 func ConvertYearToSlice(path string) []Property {
 
 	tempPath := extractYearlyZip(path)
@@ -97,6 +97,7 @@ func ConvertYearToSlice(path string) []Property {
 	return convertedData
 }
 
+// Convert the []Property to [][]string and write to a csv file at "path"
 func ConvertSliceToCSV(data []Property, path string) {
 	// Convert to 2D Slice
 	fmt.Println("Converting file to CSV")
@@ -121,6 +122,7 @@ func ConvertSliceToCSV(data []Property, path string) {
 	fmt.Printf("Completed\n\n")
 }
 
+// Convert the []Property to a JSON string and returns the string
 func ConvertSliceToJSON(data []Property) string {
 	fmt.Println("Converting to JSON data...")
 	time.Sleep(3 * time.Second)
