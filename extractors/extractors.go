@@ -194,7 +194,11 @@ func ReadDataFile(path string) []Property {
 			case 'A': // Record A => Do nothing
 				continue
 			case 'B': // Record B => Add all data to current record
-				currentRecord = Property{} // Reset current record
+				// If currentRecord is not empty, append it to data slice and reset currentRecord
+				if currentRecord != (Property{}) {
+					data = append(data, currentRecord)
+					currentRecord = Property{}
+				}
 
 				// Add record data to current record
 				recItems := strings.Split(record, ";")
@@ -226,7 +230,7 @@ func ReadDataFile(path string) []Property {
 					Property_Legal_Description: recItems[24],
 				}
 				currentRecord.Property_Legal_Description = "" // Make sure "Property_Legal_Description field is empty. This field is used to hold all values of relevant C records
-				data = append(data, currentRecord)
+				// data = append(data, currentRecord)
 			case 'C': // Record C => Add data to Property_Legal_Description field
 				recItems := strings.Split(record, ";")
 				if recItems[2] != currentRecord.Property_ID {
@@ -237,7 +241,8 @@ func ReadDataFile(path string) []Property {
 				}
 				currentRecord.Property_Legal_Description += recItems[5]
 			case 'D': // Record D => Do nothing
-			case 'Z': // Record Z => Do nothing
+			case 'Z': // Record Z => Append last record to data slice
+				data = append(data, currentRecord)
 			}
 		}
 	}
