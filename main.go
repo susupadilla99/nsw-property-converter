@@ -107,8 +107,10 @@ func ConvertSliceToCSV(data []Property, path string) {
 	for i, property := range data {
 		properties = append(properties, converters.ConvertPropertyToSlice(property))
 
-		fmt.Printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-		fmt.Printf("%d/%d", i+1, len(data))
+		if i%111 == 0 || i == len(data)-1 {
+			fmt.Printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
+			fmt.Printf("%d/%d", i+1, len(data))
+		}
 	}
 
 	fmt.Printf("\nCompleted\n\n")
@@ -137,9 +139,13 @@ func ConvertSliceToJSON(data []Property) string {
 func main() {
 
 	// Program Parameters
-	INPUT_PATH := "./2024.zip"
+	INPUT_PATH := "./2020.zip"
 
 	dataSlice := ConvertYearToSlice(INPUT_PATH)
+
+	for _, property := range dataSlice[0:20] {
+		fmt.Println(property.Property_Legal_Description)
+	}
 
 	csvPath := strings.TrimSuffix(INPUT_PATH, filepath.Ext(INPUT_PATH)) + ".csv"
 
